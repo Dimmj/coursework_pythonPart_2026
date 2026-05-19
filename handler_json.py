@@ -260,6 +260,7 @@ class Handler:
             response = {
                 "request_id": json_input.get('request_id') if isinstance(json_input, dict) else None,
                 "user_id": json_input.get('user_id') if isinstance(json_input, dict) else None,
+                "action": "ERROR",
                 "status": "ERROR"
             }
         return response
