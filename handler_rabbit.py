@@ -105,7 +105,7 @@ class RabbitMQHandler:
        # Обработка входящего сообщения
         try:
             # Парсим JSON
-            input_data = json.loads(body.decode('utf-8'))
+            input_data = body.decode('utf-8')
             routing_key = method.routing_key
 
             # передаем JSON обработчику
