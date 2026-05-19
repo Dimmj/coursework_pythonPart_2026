@@ -1,5 +1,6 @@
 from handler_json import Handler
 from handler_rabbit import RabbitMQHandler
+import traceback
 
 
 if __name__ == "__main__":
@@ -19,5 +20,6 @@ if __name__ == "__main__":
         rabbit_handler.start_consuming()
 
     except Exception as e:
-        print(f"ошибка: {e}")
+        traceback.print_exc()
+    finally:
         rabbit_handler.close()
