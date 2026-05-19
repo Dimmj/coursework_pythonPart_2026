@@ -148,7 +148,7 @@ class Handler:
         response = {
             "request_id": self.metadata['request_id'],
             "user_id": self.metadata['user_id'],
-            "action": "ANALYSIS_RESPONSE",
+            "action": "ANALYSIS",
             "status": "SUCCESS",
             "data": {
                 "platforms_analysis": platforms_analysis,
@@ -189,7 +189,7 @@ class Handler:
 
         response = {
             "request_id": json_data.get('request_id'),
-            "action": "PREDICT_RESPONSE",
+            "action": "PREDICTION",
             "status": "SUCCESS",
             "predicted_sales": predicted_sales,
             "platform": json_data['platform'],
@@ -238,8 +238,6 @@ class Handler:
 
         # Дообучаем модель
         self.train_model(features_df, target)
-
-        # Возвращаем 0 как вы и хотели
         return 0
 
     def process_request(self, json_input):
@@ -265,50 +263,3 @@ class Handler:
                 "status": "ERROR"
             }
         return response
-
-'''
-if __name__ == "__main__":
-    # Загружаем существующую модель
-    analyzer = Helper(model_path='model/sales_model_pickle.pkl')
-
-    # ===== ПРИМЕР 1: ПРЕДСКАЗАНИЕ ДО ОБУЧЕНИЯ =====
-    print("\n" + "🔮 ПРИМЕР 1: ПРЕДСКАЗАНИЕ ДО ДООБУЧЕНИЯ")
-    predict_json = {
-        "request_id": "test-001",
-        "action": "PREDICT",
-        "platform": "VK",
-        "planned_costs": 50000.0
-    }
-
-    predict_result = analyzer.process_request(predict_json)
-    print(f"Результат предсказания: {predict_result}")
-
-    # ===== ПРИМЕР 2: ДООБУЧЕНИЕ МОДЕЛИ =====
-    print("\n" + "🎓 ПРИМЕР 2: ЗАПРОС НА ДООБУЧЕНИЕ")
-    train_json = {
-        "request_id": "550e8400-e29b-41d4-a716-446655440000",
-        "user_id": 101,
-        "action": "TRAIN",
-        "data": [
-            {"platform": "VK", "month": "2023-05-01", "costs": 50000, "sales": 65000},
-            {"platform": "VK", "month": "2023-06-01", "costs": 60000, "sales": 72000},
-            {"platform": "Yandex Direct", "month": "2023-05-01", "costs": 67000, "sales": 80000},
-            {"platform": "Yandex Direct", "month": "2023-06-01", "costs": 56000, "sales": 78000}
-        ]
-    }
-
-    train_result = analyzer.process_request(train_json)
-    print(f"Результат дообучения: {train_result}")
-
-    # ===== ПРИМЕР 3: ПРЕДСКАЗАНИЕ ПОСЛЕ ДООБУЧЕНИЯ =====
-    print("\n" + "🔮 ПРИМЕР 3: ПРЕДСКАЗАНИЕ ПОСЛЕ ДООБУЧЕНИЯ")
-    predict_json2 = {
-        "request_id": "test-002",
-        "action": "PREDICT",
-        "platform": "VK",
-        "planned_costs": 50000.0
-    }
-
-    predict_result2 = analyzer.process_request(predict_json2)
-    print(f"Результат предсказания после дообучения: {predict_result2}")
-'''
