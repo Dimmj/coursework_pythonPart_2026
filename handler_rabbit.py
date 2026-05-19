@@ -1,17 +1,23 @@
 import pika
 import json
 from typing import Dict, Any
+from os import getenv
+import time
 
 
 class RabbitMQHandler:
     def __init__(self, handler_instance):
         self.handler = handler_instance
 
-        # Настройки подключения (ИЗМЕНИТЬ)??????????????????????
-        self.rabbitmq_host = 'localhost'
-        self.rabbitmq_port = 5672
-        self.rabbitmq_user = 'guest'
-        self.rabbitmq_password = 'guest'
+        # Настройки подключения
+        self.rabbitmq_host = getenv('RABBITMQ_HOST', 'rabbitmq')
+        self.rabbitmq_port = int(getenv('RABBITMQ_PORT', 5672))
+        self.rabbitmq_user = getenv('RABBITMQ_USER', 'guest')
+        self.rabbitmq_password = getenv('RABBITMQ_PASS', 'guest')
+
+        # Настройки для повторных попыток
+        self.max_retries = 30  # Максимальное количество попыток
+        self.retry_delay = 2  # Задержка между попытками в секундах
 
         # Настройки exchanges
         self.input_exchange = 'marketing.exchange'
@@ -38,44 +44,61 @@ class RabbitMQHandler:
         self.channel = None
 
     def connect(self):
-        """Установка соединения с RabbitMQ"""
-        credentials = pika.PlainCredentials(self.rabbitmq_user, self.rabbitmq_password)
-        parameters = pika.ConnectionParameters(
-            host=self.rabbitmq_host,
-            port=self.rabbitmq_port,
-            credentials=credentials
-        )
+        # установка соединения с RabbitMQ с повторными попытками
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                # попытка подключения
+                credentials = pika.PlainCredentials(self.rabbitmq_user, self.rabbitmq_password)
+                parameters = pika.ConnectionParameters(
+                    host=self.rabbitmq_host,
+                    port=self.rabbitmq_port,
+                    credentials=credentials,
+                    heartbeat=600,
+                    blocked_connection_timeout=300
+                )
 
-        self.connection = pika.BlockingConnection(parameters)
-        self.channel = self.connection.channel()
+                self.connection = pika.BlockingConnection(parameters)
+                self.channel = self.connection.channel()
 
-        # Создаем exchanges
-        self.channel.exchange_declare(
-            exchange=self.input_exchange,
-            exchange_type='direct',
-            durable=True
-        )
+                # Создаем exchanges
+                self.channel.exchange_declare(
+                    exchange=self.input_exchange,
+                    exchange_type='direct',
+                    durable=True
+                )
 
-        self.channel.exchange_declare(
-            exchange=self.output_exchange,
-            exchange_type='direct',
-            durable=True
-        )
+                self.channel.exchange_declare(
+                    exchange=self.output_exchange,
+                    exchange_type='direct',
+                    durable=True
+                )
 
-        # Создаем очереди и привязываем их
-        for routing_key, queue_name in self.queues.items():
-            self.channel.queue_declare(
-                queue=queue_name,
-                durable=True,
-                exclusive=False,
-                auto_delete=False
-            )
+                # Создаем очереди и привязываем их
+                for routing_key, queue_name in self.queues.items():
+                    self.channel.queue_declare(
+                        queue=queue_name,
+                        durable=True,
+                        exclusive=False,
+                        auto_delete=False
+                    )
 
-            self.channel.queue_bind(
-                exchange=self.input_exchange,
-                queue=queue_name,
-                routing_key=routing_key
-            )
+                    self.channel.queue_bind(
+                        exchange=self.input_exchange,
+                        queue=queue_name,
+                        routing_key=routing_key
+                    )
+                return True
+
+            except pika.exceptions.AMQPConnectionError as e:
+                # при неудавшейся попытке
+                if attempt < self.max_retries:
+                    # подождать
+                    time.sleep(self.retry_delay)
+                else:
+                    # попытки исчерпаны
+                    raise
+            except Exception as e:
+                raise
 
     def process_message(self, channel, method, properties, body):
         input_data = None
