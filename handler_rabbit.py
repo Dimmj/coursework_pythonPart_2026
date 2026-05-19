@@ -122,6 +122,7 @@ class RabbitMQHandler:
         except Exception:
             error_response = {
                 "request_id": input_data.get('request_id') if input_data else None,
+                "action": "ERROR",
                 "status": "ERROR"
             }
             self.send_response(error_response, 'analysis.result.key')
